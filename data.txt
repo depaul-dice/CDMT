@@ -1,0 +1,14 @@
+deepmind
+postgres
+django
+golang
+mysql
+nginx
+node
+python
+pytorch
+rails
+r-base
+redis
+tensorflow
+tomcat
