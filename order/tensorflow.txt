@@ -1,0 +1,10 @@
+1.13.1-jupyter.tar
+1.13.2-jupyter.tar
+1.14.0-jupyter.tar
+1.15.0-jupyter.tar
+1.15.2-jupyter.tar
+2.0.0-jupyter.tar
+2.0.1-jupyter.tar
+2.1.0-jupyter.tar
+2.1.1-jupyter.tar
+2.2.0-jupyter.tar
