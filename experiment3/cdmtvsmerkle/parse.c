@@ -4,7 +4,7 @@ char **parse(char *path, int *count) {
 
     FILE *fp = fopen(path, "r");
     if(!fp) {
-        perror("couldn't open");
+        fprintf(stderr, "couldn't open file: %s\n", path);
         exit(1);
     }
     size_t characters = -1; /* this is MAX_SIZE */
@@ -49,7 +49,7 @@ key_value *parse_kv(char *raw) {
     rv->key =(void *)malloc(sizeof(fingerprint));
     rv->value = (void *)malloc(sizeof(int));
     for(process = strtok(raw, "\","); process; process = strtok(NULL, "\",")) {
-        if(!memcmp(",[", process, sizeof(",[")) || !memcmp("[", process, sizeof("["))) 
+        if(!memcmp(",[", process, sizeof(",[")) || !memcmp("[", process, sizeof("[")) || !memcmp("[[", process, sizeof("[[")))
             continue;
         if(!i++) {
             for(int j = 0; j < FP_SIZE; j++) {

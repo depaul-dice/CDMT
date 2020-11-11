@@ -9,6 +9,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <stdint.h>
+#include <errno.h>
 
 #include <time.h>
 #include <dirent.h>

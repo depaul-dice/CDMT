@@ -2,6 +2,12 @@
 
 int verbosity = POS_VERBOSE;
 
+struct r_value {
+    Mtree *mt;
+    int total;
+    int changed;
+};
+
 int getline_(char *lineptr, size_t *n, FILE *stream) {
     static char line[256];
     char *ptr;
@@ -45,19 +51,20 @@ void pos_log(int level, const char *fmt, ...) {
     fprintf(stdout, "%s", msg);
 }
 
+struct r_value *iteration_(char path[], Mtree *old);
+
 int main(int argc, char **argv) {
     verbosity = POS_VERBOSE;
 
-    //hashmap *hm = NULL;
-    hm_mt *hmt = NULL;
+    Mtree *mt = NULL;
+    int total_leaves = 0;
+    int dif_leaves = 0;
 
     if(argc == 1) {
         fprintf(stderr, "Usage: %s dirname\n", argv[0]);
         return EXIT_FAILURE;
     }
     char filename_qfd[PATH_MAX];
-    char old_path[PATH_MAX];
-    old_path[0] = 0;
 
     //FILE *fp = fopen("nodescompared.csv", "w");
     //fclose(fp);
@@ -81,73 +88,35 @@ int main(int argc, char **argv) {
         printf("file: %s\n", file);
         strncat(filename_qfd, file, strlen(file));
         strncat(filename_qfd, ".data.bk", strlen(".data.bk"));
-        hmt = iteration(filename_qfd, hmt);
-        strncpy(old_path, filename_qfd, PATH_MAX);
+        struct r_value *rv = iteration_(filename_qfd, mt);
+        mt = rv->mt;
+        total_leaves += rv->total;
+        dif_leaves += rv->changed;
+        free(rv);
     }
  
-    assert(hmt);
-    Mtree_destroy(hmt->mt);
-    hashmap_destroy(hmt->hm, WHOLE);
-    free(hmt);
+    Mtree_destroy(mt);
     free(file);
     fclose(fp);
    
     return 0;
 }
 
-hm_mt *iteration(char path[], hm_mt *old) {
-    //printf("path: %s\n", path);
-    int mt_total_change = -1;
-    int mt_internal_change = -1;
-    int mt_total_nodes = -1;
-    int pos_total_change = -1;
-    //int pos_internal_change = -1;
-    int pos_total_nodes = -1;
+struct r_value *iteration_(char path[], Mtree *old) {
+    struct r_value *rv = malloc(sizeof(struct r_value));
+    int mt_leaves_change = -1;
+    int mt_total_leaves = -1;
+    int trash = -1;
 
-    int trash_a = -1;
-    int trash_b = -1;
-    /* prepare key value pair at first */
-    int leaves_count = 0;
-    char **parsed = parse(path, &leaves_count);
-    key_value **leaves = parse_kvs(parsed, leaves_count);
-
-    /* first you record the node change of pos tree */
-    hashmap *hm = hashmap_create(HASHMAP_SIZE, node_destroy);
-    node *root = NULL;
-    /* comparison in POS tree */
+    char **parsed = parse(path, &mt_total_leaves);
+    key_value **leaves = parse_kvs(parsed, mt_total_leaves);
+    Mtree *current_mt = Mtree_create(leaves, mt_total_leaves, &trash);
     if(old) {
-        create_POS(leaves, leaves_count, old->hm, &pos_total_change, &pos_total_nodes);
-    } 
-        
-    root = create_POS(leaves, leaves_count, hm, &trash_a, &trash_b);
-    /* preparing for the next iteration */
-
-    /* next you record the node change of merkle tree */
-    Mtree *current_mt = Mtree_create(leaves, leaves_count, &mt_total_nodes);
-
-    /* comparison in merkle tree */
-    if(old) {
-        assert(old->mt);
-        Mtree_cmp(old->mt, current_mt, &mt_total_change, &mt_internal_change);
-    }
-    //Mtree_write("test.txt", current_mt);
-
-    /* write whatever needs to be written */
-    if(old) {
-        FILE *fp = fopen("merkleposcompare.csv", "a+");
-        fprintf(fp, "%s:%s:%d:%d:%d:%d,",old->path, path, mt_total_change, pos_total_change, mt_total_nodes, pos_total_nodes); 
-        fclose(fp);
+        assert(old);
+        mt_leaves_change = Mtree_cmp_leaves_cnt(old, current_mt);
     }
 
-    /* destroy the older ones */
-    if(old) {
-        Mtree_destroy(old->mt);
-        hashmap_destroy(old->hm, WHOLE);
-        //subtree_destroy(old->root);
-        free(old);
-    }
-
-    for(int i = 0; i < leaves_count; i++) {
+    for(int i = 0; i < mt_total_leaves; i++) {
         free(parsed[i]);
         free(leaves[i]->key);
         free(leaves[i]->value);
@@ -155,13 +124,15 @@ hm_mt *iteration(char path[], hm_mt *old) {
     }
     free(parsed); 
     free(leaves);
-
-    /* create the return value */
-    hm_mt *new = malloc(sizeof(hm_mt));
-    strncpy(new->path, path, 64);
-    new->hm = hm;
-    new->mt = current_mt;
-    new->root = root;
-    return new;
+    Mtree_destroy(old);
+    rv->total = mt_total_leaves;
+    rv->changed = mt_leaves_change;
+    rv->mt = current_mt;
+    return rv;
 }
+
+
+
+
+    
 

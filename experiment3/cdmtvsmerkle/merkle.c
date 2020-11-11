@@ -127,6 +127,84 @@ int Mtree_cmp(Mtree *a, Mtree *b, int *mt_total_change, int *mt_internal_change)
     return count;
 }
 
+int count_num_leaves(Mnode *curr) {
+    int cnt = 0;
+    if(!curr) return 0;
+    if(curr->height == 0) {
+        return 1;
+    } else {
+        for(int i = 0; i < NUM_CHILDREN; i++)
+            cnt+= count_num_leaves(curr->children[i]);
+    }
+    return cnt;
+}
+
+int recursive_count_num_leaves(Mnode *a, Mnode *b, char a_old) {
+    int count = 0;
+    Mnode *old = NULL;
+    Mnode *new = NULL;
+    if(a_old) {
+        old = a; new = b;
+    } else { 
+        old = b; new = a;  
+    }
+    if(!new)
+        return count;
+    if(!old) 
+        return count_num_leaves(new); 
+
+    if(memcmp(old->fp, new->fp, sizeof(fingerprint))) {
+        if(old->children && new->children) {
+            for(int i = 0; i < NUM_CHILDREN; i++){
+                count += recursive_count_num_leaves(a->children[i], b->children[i], a_old);
+            }
+        } else if (!(old->children) && new->children) {
+            for(int i = 0; i < NUM_CHILDREN; i++)
+                count += count_num_leaves(new->children[i]);
+        } else if (old->children && !(new->children)) {
+        } else {
+            if(new->height == 0) count++; 
+        }
+    }
+    return count;
+}
+
+int root_cmp_leaves_cnt(Mnode *root_a, Mnode *root_b) {
+    /* a is old, b is new */
+    assert(root_a && root_b);
+    int count = 0;
+
+    Mnode *tmp_high = (root_a->height > root_b->height) ? root_a : root_b;
+    Mnode *tmp_low = (root_a->height > root_b->height) ? root_b : root_a;
+    char a_old = -1;
+    if(tmp_high == root_a)
+        a_old = 1;
+    else 
+        a_old = 0;
+
+    while(tmp_high->height > tmp_low->height) {
+        assert(tmp_high -> children);
+        count++;
+        for(int i = 1; i < NUM_CHILDREN; i++) {
+            if(tmp_high->children[i] && (!a_old))
+                count += count_num_leaves(tmp_high->children[i]);
+            else
+                break;
+        }
+        tmp_high = tmp_high->children[0];
+    }
+    assert(tmp_high);
+    count += recursive_count_num_leaves(tmp_high, tmp_low, a_old); 
+
+    return count;
+}
+
+int Mtree_cmp_leaves_cnt(Mtree *a, Mtree *b) {
+    int count = 0;
+    count = root_cmp_leaves_cnt(a->root, b->root);
+    return count;
+}
+
 void Mtree_write(char *path, Mtree *mtree) {
     FILE *fp_ = fopen(path, "w");
     Mnode *root = mtree->root;

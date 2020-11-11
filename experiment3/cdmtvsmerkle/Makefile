@@ -7,9 +7,12 @@ LIBRARY = -lssl -lcrypto
 SOURCES = $(wildcard %.c)
 HEADER = $(wildcard %.h)
 OBJECTS = $(patsubst %.c, %.o,$(wildcard *.c))
-EXECUTABLE = main debug
+EXECUTABLE=main debug extra
 
 all: main debug
+
+extra: 
+	$(CC) extra.c parse.c pos.c merkle.c node.c hashmap.c queue.c $(CFLAGS) -o $@ $(LIBRARY)
 
 main: $(SOURCES) $(HEADER) 
 	$(CC) main.c parse.c pos.c merkle.c node.c hashmap.c queue.c $(CFLAGS) -o $@ $(LIBRARY)
@@ -23,4 +26,4 @@ clean:
 
 .PHONY: clean_all
 clean_all:
-	rm -f $(OBJECTS) $(EXECUTABLE) posmeta/*
+	rm -f $(OBJECTS) $(EXECUTABLE) merkleposcompare.csv posmeta/* 
